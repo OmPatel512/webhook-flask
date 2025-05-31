@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  flask-app:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_APP=run.py
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - PYTHONPATH=/app
+      - MONGO_URI=mongodb://host.docker.internal:27017/tachstax
+    volumes:
+      - .:/app
+      - /app/__pycache__  # Exclude pycache from volume mount
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: ngrok
+    restart: unless-stopped
+    volumes:
+      - ./ngrok.yml:/etc/ngrok.yml
+    command: start --all --config /etc/ngrok.yml
+    depends_on:
+      - flask-app
+    ports:
+      - "4040:4040"  # Ngrok web interface
