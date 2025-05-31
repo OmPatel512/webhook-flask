@@ -1,7 +1,0 @@
-version: 2 # <-- REQUIRED for ngrok v3+
-authtoken: 2xqnxi0xGXKdekAz2ZF9c6egMrk_7CsdsudDkyAwu8B7d1Hte
-
-tunnels:
-  flask-app:
-    proto: http
-    addr: flask-app:5000
