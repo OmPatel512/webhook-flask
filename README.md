@@ -247,25 +247,5 @@ GitHub Repository
 
 ---
 
-## 📝 License
 
-This project is open source and available under the [MIT License](LICENSE).
 
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
----
-
-## 📞 Support
-
-If you encounter any issues or have questions:
-1. Check the troubleshooting section
-2. Review the Docker logs
-3. Open an issue on GitHub
