@@ -1,164 +1,271 @@
 # Webhook Tracker – GitHub Webhook Event Listener & UI
 
-This repository (`webhook-repo`) contains the **Flask-based backend and frontend** for tracking GitHub repository events like `Push`, `Pull Request`, and optionally `Merge`. Events are received via webhook, saved to MongoDB, and displayed in a UI that refreshes every 15 seconds.
+This repository contains a **Flask-based backend and frontend** for tracking GitHub repository events like `Push`, `Pull Request`, and `Merge`. Events are received via webhook, saved to MongoDB, and displayed in a real-time UI that automatically refreshes every 15 seconds.
 
-> ⚙️ This repo is meant to be connected to a GitHub Actions testing repo (e.g. [`action-repo`](#action-repo-link-here)) that triggers webhook events.
+> ⚙️ This repo is designed to be connected to any GitHub repository that triggers webhook events.
 
 ---
 
 ## 📌 Features
 
 - ✅ Receives GitHub webhook events (`Push`, `Pull Request`, `Merge`)
-- ✅ Stores events in MongoDB
-- ✅ Displays human-readable events in a simple UI
-- ✅ UI auto-refreshes every 15 seconds (no JavaScript needed)
-- 🏆 Bonus: Merge events supported for extra credit
+- ✅ Stores events in MongoDB with timestamps
+- ✅ Displays human-readable events in a clean UI
+- ✅ UI auto-refreshes every 15 seconds for real-time updates
+- ✅ Dockerized for easy deployment
+- ✅ Ngrok integration for local testing
+- ✅ RESTful API endpoints for event data
+- 🏆 Merge event detection for pull request closures
 
 ---
 
-## 📁 Project Structure
+## 🚀 Getting Started
+
+### 🐳 Docker Setup (Recommended)
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-username/webhook-repo.git
+   cd webhook-repo
+   ```
+
+2. **Configure ngrok (for webhook testing)**
+   - Sign up at [ngrok.com](https://ngrok.com) and get your auth token
+   - Update `ngrok.yml` with your auth token:
+   ```yaml
+   version: "2"
+   authtoken: YOUR_NGROK_AUTH_TOKEN_HERE
+   tunnels:
+     flask-webhook:
+       proto: http
+       addr: flask-app:5000
+       schemes: [https]
+       inspect: true
+   ```
+
+3. **Start the application**
+   ```bash
+   docker-compose up --build
+   ```
+
+4. **Get your webhook URL**
+   - Visit http://localhost:4040 (ngrok web interface)
+   - Copy the HTTPS URL (e.g., `https://abc123.ngrok.io`)
+
+### 🔧 Local Development Setup
+
+1. **Install dependencies**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+2. **Set up MongoDB**
+   ```bash
+   # Using Docker
+   docker run -d -p 27017:27017 --name mongodb mongo:latest
+   
+   # Or install MongoDB locally
+   ```
+
+3. **Configure environment**
+   Create a `.env` file:
+   ```env
+   FLASK_APP=run.py
+   FLASK_ENV=development
+   MONGO_URI=mongodb://localhost:27017/tachstax
+   ```
+
+4. **Run the application**
+   ```bash
+   python run.py
+   ```
+
+---
+
+## 🛰️ GitHub Webhook Setup
+
+1. Go to your GitHub repository
+2. Navigate to `Settings → Webhooks → Add webhook`
+3. Configure the webhook:
+   - **Payload URL**: `https://your-ngrok-url.ngrok.io/webhook`
+   - **Content type**: `application/json`
+   - **Events**: Select `Push events` and `Pull requests`
+   - **Active**: ✅ Checked
+
+---
+
+## 📊 API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Main UI dashboard |
+| `/events` | GET | JSON list of recent events |
+| `/webhook` | POST | GitHub webhook receiver |
+| `/debug/events` | GET | HTML formatted event list |
+| `/debug/stats` | GET | Database statistics |
+| `/debug/test-insert` | POST | Insert test event |
+
+### Example API Usage
 
 ```bash
-webhook-repo/
-│
-├── app/
-│   ├── __init__.py          # Flask app factory
-│   ├── routes.py            # All Flask routes: UI and webhook handler
-│   ├── models.py            # MongoDB access and queries
-│   ├── utils.py             # Formatting utilities
-│   └── db.py                # MongoDB connection setup
-│
-├── templates/
-│   └── index.html           # UI template (auto-refreshes)
-│
-├── static/
-│   └── style.css            # Optional styles for the UI
-│
-├── run.py                   # Entry point for the Flask app
-├── requirements.txt         # Python dependencies
-└── README.md                # You're here
+# Get recent events
+curl http://localhost:5000/events
+
+# Get events with limit
+curl http://localhost:5000/events?limit=5
+
+# Test webhook manually
+curl -X POST http://localhost:5000/webhook \
+  -H "Content-Type: application/json" \
+  -H "X-Github-Event: push" \
+  -d '{"ref": "refs/heads/main", "commits": [{"message": "Test"}]}'
 ```
 
 ---
 
-## 🚀 How It Works
+## 📋 Event Format Examples
 
-### 🛰️ GitHub Repo Setup
+### Push Event
+```
+"john_doe pushed to main on 2025-05-31 14:30:00 UTC"
+```
 
-1. Deploy this Flask app locally or online.
-2. Expose it via a public URL (e.g. using `ngrok` or a cloud host).
-3. In your **GitHub repo** (e.g., [`action-repo`](#)), go to:
-   - `Settings → Webhooks → Add webhook`
-   - Payload URL: `https://your-app-url/webhook`
-   - Content type: `application/json`
-   - Events to trigger: `Push`, `Pull Request`, optionally others
-
-### 📥 Incoming Webhook Events
-
-| Event Type    | Format Example |
-|---------------|----------------|
-| `push`        | `"Travis" pushed to "staging" on 1st April 2021 - 9:30 PM UTC` |
-| `pull_request`| `"Travis" submitted a pull request from "staging" to "master" on 1st April 2021 - 9:00 AM UTC` |
-| `merge` 🏆    | `"Travis" merged branch "dev" to "master" on 2nd April 2021 - 12:00 PM UTC` |
-
-> Merge detection is based on `pull_request` event with `"action": "closed"` and `"merged": true`.
+### Pull Request Events
+```
+"jane_smith submitted a pull request from feature-branch to main on 2025-05-31 14:25:00 UTC"
+"jane_smith merged branch feature-branch to main on 2025-05-31 14:35:00 UTC"
+```
 
 ---
 
-## 🧪 Running Locally
+## 🔧 Configuration
 
-### 1. Clone the repo
+### Environment Variables
 
-```bash
-git clone https://github.com/your-username/webhook-repo.git
-cd webhook-repo
-```
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `FLASK_ENV` | Flask environment | `development` |
+| `FLASK_DEBUG` | Enable debug mode | `1` |
+| `MONGO_URI` | MongoDB connection string | `mongodb://localhost:27017/tachstax` |
+| `FLASK_HOST` | Flask bind address | `0.0.0.0` |
+| `FLASK_PORT` | Flask port | `5000` |
 
-### 2. Create a virtual environment & install dependencies
+### Docker Compose Services
 
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
-### 3. Set environment variables
-
-Create a `.env` file in the root:
-
-```env
-FLASK_APP=run.py
-MONGO_URI=mongodb://localhost:27017/github_webhooks
-```
-
-### 4. Run the app
-
-```bash
-flask run
-```
-
-Now open: `http://localhost:5000`  
-Use `ngrok http 5000` to make it public for GitHub webhook testing.
+- **flask-app**: Main Flask application
+- **ngrok**: Tunnel service for webhook testing
 
 ---
 
-## 🌐 Deployed Repositories
+## 🧪 Testing
 
-| Repo Name     | Purpose                           |
-|---------------|-----------------------------------|
-| [`action-repo`](#) | Dummy GitHub repo to trigger events |
-| `webhook-repo`     | This repo – webhook listener and UI |
+### Manual Testing
+```bash
+# Test database connection
+curl http://localhost:5000/debug/stats
+
+# Insert test event
+curl -X POST http://localhost:5000/debug/test-insert
+
+# View events
+curl http://localhost:5000/events
+```
+
+### GitHub Event Testing
+1. Make a commit to your connected repository
+2. Create a pull request
+3. Merge the pull request
+4. Check http://localhost:5000 for real-time updates
+
+---
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Webhook delivery failed**
+- Check if ngrok tunnel is active: http://localhost:4040
+- Verify webhook URL in GitHub settings
+- Check Flask app logs: `docker-compose logs flask-app`
+
+**No events showing**
+- Check database connection: `curl http://localhost:5000/debug/stats`
+- Verify MongoDB is running
+- Check webhook payload format
+
+**Docker issues**
+```bash
+# Restart containers
+docker-compose down && docker-compose up --build
+
+# Check container status
+docker-compose ps
+
+# View logs
+docker-compose logs -f flask-app
+```
 
 ---
 
 ## 📦 Dependencies
 
-- Python 3.x
-- Flask
-- pymongo
-- python-dotenv
-
-Install via:
-
-```bash
-pip install -r requirements.txt
+```txt
+Flask==3.1.0
+pymongo==4.10.1
+python-dotenv==1.0.1
 ```
 
 ---
 
-## 📬 Example Webhook Payloads
+## 🏗️ Architecture
 
-Handled GitHub events:
-- `push`
-- `pull_request` (`opened`, `closed` if merged)
-
-Sample webhook delivery looks like:
-
-```json
-{
-  "repository": { "full_name": "user/repo" },
-  "pusher": { "name": "Travis" },
-  "ref": "refs/heads/staging",
-  ...
-}
+```
+GitHub Repository
+       ↓ (webhook)
+   Ngrok Tunnel
+       ↓
+  Flask Application
+       ↓
+   MongoDB Database
+       ↓
+    Web Interface
 ```
 
 ---
 
-## 💡 Notes
+## 🚀 Deployment Options
 
-- UI uses `meta` tag to auto-refresh every 15 seconds — no JavaScript involved.
-- Events older than your desired time window can be filtered in `models.py`.
-- You can extend `models.py` to log repo name, branch details, and action type.
+### Local Development
+- Use Docker Compose with ngrok for webhook testing
+
+### Production Deployment
+- Deploy to cloud platforms (Heroku, AWS, DigitalOcean)
+- Use MongoDB Atlas for database
+- Configure proper webhook URLs
 
 ---
 
-## ✅ Submission Checklist
+## 📝 License
 
-- [x] `Push`, `Pull Request` events handled
-- [x] Events stored in MongoDB
-- [x] Clean, readable UI with auto-refresh
-- [x] Code modularized with clear naming and structure
-- [x] Two separate GitHub repositories: `webhook-repo` and `action-repo`
-- [x] Merge handling (optional brownie point)
+This project is open source and available under the [MIT License](LICENSE).
 
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+---
+
+## 📞 Support
+
+If you encounter any issues or have questions:
+1. Check the troubleshooting section
+2. Review the Docker logs
+3. Open an issue on GitHub
